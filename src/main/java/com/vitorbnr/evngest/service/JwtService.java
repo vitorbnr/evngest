@@ -4,9 +4,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureException;
-import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -37,11 +36,15 @@ public class JwtService {
 
     public boolean validarToken(String token, String nomeDeUsuario) {
         final String nomeDeUsuarioDoToken = extrairNomeDeUsuario(token);
-        return (nomeDeUsuarioDoToken.equals(nomeDeUsuario) && !isTokenExpirado(token));
+        return (nomeDeUsuarioDoToken != null && nomeDeUsuarioDoToken.equals(nomeDeUsuario) && !isTokenExpirado(token));
     }
 
     public String extrairNomeDeUsuario(String token) {
-        return extrairClaim(token, Claims::getSubject);
+        try {
+            return extrairClaim(token, Claims::getSubject);
+        } catch (ExpiredJwtException e) {
+            return e.getClaims().getSubject();
+        }
     }
 
     private Date extrairDataExpiracao(String token) {
@@ -49,7 +52,11 @@ public class JwtService {
     }
 
     private boolean isTokenExpirado(String token) {
-        return extrairDataExpiracao(token).before(new Date());
+        try {
+            return extrairDataExpiracao(token).before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        }
     }
 
     private Claims extrairTodasAsClaims(String token) {
@@ -59,8 +66,8 @@ public class JwtService {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-        } catch (SignatureException | MalformedJwtException | ExpiredJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-            return null;
+        } catch (SignatureException | MalformedJwtException | ExpiredJwtException | IllegalArgumentException e) {
+            throw new RuntimeException("Token invalido ou expirado.", e);
         }
     }
 
