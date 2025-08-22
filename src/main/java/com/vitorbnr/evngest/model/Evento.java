@@ -1,11 +1,9 @@
 package com.vitorbnr.evngest.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-@Data
 @Entity
 @Table(name = "evento")
 public class Evento {
@@ -23,15 +21,20 @@ public class Evento {
 
     private String localizacao;
 
-    public Evento() {
+    @ManyToOne
+    @JoinColumn(name = "criador_id", nullable = false)
+    private Usuario criador;
+
+    public Evento () {
     }
 
-    public Evento(Long id, String nome, String descricao, LocalDateTime dataEvento, String localizacao) {
+    public Evento(Long id, String nome, String descricao, LocalDateTime dataEvento, String localizacao, Usuario criador) {
         this.id = id;
         this.nome = nome;
         this.descricao = descricao;
         this.dataEvento = dataEvento;
         this.localizacao = localizacao;
+        this.criador = criador;
     }
 
     public Long getId() {
@@ -74,17 +77,25 @@ public class Evento {
         this.localizacao = localizacao;
     }
 
+    public Usuario getCriador() {
+        return criador;
+    }
+
+    public void setCriador(Usuario criador) {
+        this.criador = criador;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Evento evento = (Evento) o;
-        return Objects.equals(id, evento.id);
+        return Objects.equals(id, evento.id) && Objects.equals(nome, evento.nome) && Objects.equals(descricao, evento.descricao) && Objects.equals(dataEvento, evento.dataEvento) && Objects.equals(localizacao, evento.localizacao) && Objects.equals(criador, evento.criador);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return Objects.hash(id, nome, descricao, dataEvento, localizacao, criador);
     }
 
     @Override
@@ -95,6 +106,7 @@ public class Evento {
                 ", descricao='" + descricao + '\'' +
                 ", dataEvento=" + dataEvento +
                 ", localizacao='" + localizacao + '\'' +
+                ", criador=" + criador +
                 '}';
     }
 }
