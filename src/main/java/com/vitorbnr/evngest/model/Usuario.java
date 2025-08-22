@@ -2,22 +2,14 @@ package com.vitorbnr.evngest.model;
 
 import jakarta.persistence.*;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
 @Table(name = "usuario")
 public class Usuario {
-
-    public Usuario() {
-    }
-
-    public Usuario(UUID id, String nomeDeUsuario, String senha, String email) {
-        this.id = id;
-        this.nomeDeUsuario = nomeDeUsuario;
-        this.senha = senha;
-        this.email = email;
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -31,6 +23,23 @@ public class Usuario {
 
     @Column(nullable = false)
     private String email;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "usuario_papeis",
+            joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "papel_id")
+    )
+
+    private Set<Papel> papeis = new HashSet<>();
+
+    public Set<Papel> getPapeis() {
+        return papeis;
+    }
+
+    public void setPapeis(Set<Papel> papeis) {
+        this.papeis = papeis;
+    }
 
     public UUID getId() {
         return id;
@@ -61,6 +70,16 @@ public class Usuario {
     }
 
     public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public Usuario() {
+    }
+
+    public Usuario(UUID id, String nomeDeUsuario, String senha, String email) {
+        this.id = id;
+        this.nomeDeUsuario = nomeDeUsuario;
+        this.senha = senha;
         this.email = email;
     }
 
