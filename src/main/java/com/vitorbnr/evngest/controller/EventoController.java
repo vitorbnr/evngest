@@ -47,4 +47,37 @@ public class EventoController {
                 .map(evento -> ResponseEntity.ok().body(evento))
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> atualizarEvento(@PathVariable Long id, @RequestBody Evento eventoDetalhes, Authentication authentication) {
+        return eventoRepository.findById(id)
+                .map(eventoExistente -> {
+                    String nomeDeUsuario = authentication.getName();
+                    if (!eventoExistente.getCriador().getNomeDeUsuario().equals(nomeDeUsuario)) {
+                        return ResponseEntity.status(403).body("Voce nao tem permissao para atualizar este evento.");
+                    }
+
+                    eventoExistente.setNome(eventoDetalhes.getNome());
+                    eventoExistente.setDescricao(eventoDetalhes.getDescricao());
+                    eventoExistente.setLocalizacao(eventoDetalhes.getLocalizacao());
+                    eventoExistente.setDataEvento(eventoDetalhes.getDataEvento());
+
+                    Evento eventoAtualizado = eventoRepository.save(eventoExistente);
+                    return ResponseEntity.ok(eventoAtualizado);
+                }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Object> excluirEvento(@PathVariable Long id, Authentication authentication) {
+        return eventoRepository.findById(id)
+                .map(eventoExistente -> {
+                    String nomeDeUsuario = authentication.getName();
+                    if (!eventoExistente.getCriador().getNomeDeUsuario().equals(nomeDeUsuario)) {
+                        return ResponseEntity.status(403).body(null);
+                    }
+                    eventoRepository.delete(eventoExistente);
+                    return ResponseEntity.noContent().build();
+                }).orElse(ResponseEntity.notFound().build());
+    }
 }
+
