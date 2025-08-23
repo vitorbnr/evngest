@@ -1,8 +1,8 @@
 CREATE TABLE usuario (
-id UUID PRIMARY KEY,
-nome_de_usuario VARCHAR(255) UNIQUE NOT NULL,
-senha VARCHAR(255) NOT NULL,
-email VARCHAR(255) NOT NULL
+    id UUID PRIMARY KEY,
+    nome_de_usuario VARCHAR(255) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL
 );
 
 
