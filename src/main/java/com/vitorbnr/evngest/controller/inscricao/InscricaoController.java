@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -56,5 +57,18 @@ public class InscricaoController {
         inscricaoRepository.save(novaInscricao);
 
         return ResponseEntity.ok("Inscricao realizada com sucesso.");
+    }
+
+    @GetMapping("/evento/{idEvento}")
+    public ResponseEntity<?> listarInscritosPorEvento(@PathVariable Long idEvento) {
+        Optional<Evento> eventoOpt = eventoRepository.findById(idEvento);
+
+        if (eventoOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Evento nao encontrado.");
+        }
+
+        List<Inscricao> inscritos = inscricaoRepository.findByEvento(eventoOpt.get());
+
+        return ResponseEntity.ok(inscritos);
     }
 }
