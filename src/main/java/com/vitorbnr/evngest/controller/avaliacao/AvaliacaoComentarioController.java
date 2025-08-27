@@ -1,5 +1,6 @@
 package com.vitorbnr.evngest.controller.avaliacao;
 
+import com.vitorbnr.evngest.exception.RecursoNaoEncontradoException;
 import com.vitorbnr.evngest.model.Avaliacao;
 import com.vitorbnr.evngest.model.Comentario;
 import com.vitorbnr.evngest.model.Evento;
@@ -36,18 +37,14 @@ public class AvaliacaoComentarioController {
     @PostMapping("/comentarios/{idEvento}")
     public ResponseEntity<?> criarComentario(@PathVariable Long idEvento, @RequestBody Comentario comentario, Authentication authentication) {
         String nomeDeUsuario = authentication.getName();
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByNomeDeUsuario(nomeDeUsuario);
+        Usuario usuario = usuarioRepository.findByNomeDeUsuario(nomeDeUsuario)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario nao encontrado."));
 
-        if (usuarioOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Usuario nao encontrado.");
-        }
-        Optional<Evento> eventoOpt = eventoRepository.findById(idEvento);
-        if (eventoOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Evento nao encontrado.");
-        }
+        Evento evento = eventoRepository.findById(idEvento)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Evento nao encontrado."));
 
-        comentario.setUsuario(usuarioOpt.get());
-        comentario.setEvento(eventoOpt.get());
+        comentario.setUsuario(usuario);
+        comentario.setEvento(evento);
         comentario.setDataComentario(LocalDateTime.now());
 
         Comentario novoComentario = comentarioRepository.save(comentario);
@@ -56,34 +53,29 @@ public class AvaliacaoComentarioController {
 
     @GetMapping("/comentarios/evento/{idEvento}")
     public ResponseEntity<List<Comentario>> listarComentariosPorEvento(@PathVariable Long idEvento) {
-        Optional<Evento> eventoOpt = eventoRepository.findById(idEvento);
-        if (eventoOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        List<Comentario> comentarios = comentarioRepository.findByEvento(eventoOpt.get());
+        Evento evento = eventoRepository.findById(idEvento)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Evento nao encontrado."));
+
+        List<Comentario> comentarios = comentarioRepository.findByEvento(evento);
         return ResponseEntity.ok(comentarios);
     }
 
     @PostMapping("/avaliacoes/{idEvento}")
     public ResponseEntity<?> criarAvaliacao(@PathVariable Long idEvento, @RequestBody Avaliacao avaliacao, Authentication authentication) {
         String nomeDeUsuario = authentication.getName();
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByNomeDeUsuario(nomeDeUsuario);
+        Usuario usuario = usuarioRepository.findByNomeDeUsuario(nomeDeUsuario)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario nao encontrado."));
 
-        if (usuarioOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Usuario nao encontrado.");
-        }
-        Optional<Evento> eventoOpt = eventoRepository.findById(idEvento);
-        if (eventoOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Evento nao encontrado.");
-        }
+        Evento evento = eventoRepository.findById(idEvento)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Evento nao encontrado."));
 
-        Optional<Avaliacao> avaliacaoExistente = avaliacaoRepository.findByUsuarioAndEvento(usuarioOpt.get(), eventoOpt.get());
+        Optional<Avaliacao> avaliacaoExistente = avaliacaoRepository.findByUsuarioAndEvento(usuario, evento);
         if (avaliacaoExistente.isPresent()) {
             return ResponseEntity.status(409).body("Usuario ja avaliou este evento.");
         }
 
-        avaliacao.setUsuario(usuarioOpt.get());
-        avaliacao.setEvento(eventoOpt.get());
+        avaliacao.setUsuario(usuario);
+        avaliacao.setEvento(evento);
 
         Avaliacao novaAvaliacao = avaliacaoRepository.save(avaliacao);
         return ResponseEntity.ok(novaAvaliacao);
