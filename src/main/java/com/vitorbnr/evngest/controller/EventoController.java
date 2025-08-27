@@ -4,11 +4,11 @@ import com.vitorbnr.evngest.model.Evento;
 import com.vitorbnr.evngest.model.Usuario;
 import com.vitorbnr.evngest.repository.EventoRepository;
 import com.vitorbnr.evngest.repository.UsuarioRepository;
+import com.vitorbnr.evngest.service.notificacao.NotificacaoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +21,9 @@ public class EventoController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private NotificacaoService notificacaoService;
 
     @GetMapping
     public List<Evento> listarEventos() {
@@ -35,6 +38,7 @@ public class EventoController {
         if (usuarioOpt.isPresent()) {
             evento.setCriador(usuarioOpt.get());
             Evento novoEvento = eventoRepository.save(evento);
+            notificacaoService.enviarNotificacao("Novo evento criado: " + novoEvento.getNome());
             return ResponseEntity.ok(novoEvento);
         } else {
             return ResponseEntity.status(404).body("Usuario nao encontrado.");
@@ -68,16 +72,15 @@ public class EventoController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> excluirEvento(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<?> excluirEvento(@PathVariable Long id, Authentication authentication) {
         return eventoRepository.findById(id)
                 .map(eventoExistente -> {
                     String nomeDeUsuario = authentication.getName();
                     if (!eventoExistente.getCriador().getNomeDeUsuario().equals(nomeDeUsuario)) {
-                        return ResponseEntity.status(403).body(null);
+                        return ResponseEntity.status(403).body("Voce nao tem permissao para excluir este evento.");
                     }
                     eventoRepository.delete(eventoExistente);
                     return ResponseEntity.noContent().build();
                 }).orElse(ResponseEntity.notFound().build());
     }
 }
-
