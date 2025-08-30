@@ -38,24 +38,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        jwt = authHeader.substring(7);
-        nomeDeUsuario = jwtService.extrairNomeDeUsuario(jwt);
+        jwt = authHeader.substring(7).replaceAll("\\s+", "");
 
-        if (nomeDeUsuario != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(nomeDeUsuario);
+        try {
+            nomeDeUsuario = jwtService.extrairNomeDeUsuario(jwt);
 
-            if (jwtService.validarToken(jwt, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (nomeDeUsuario != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(nomeDeUsuario);
+
+                if (jwtService.validarToken(jwt, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+        } catch (Exception e) {
+            System.err.println("Erro ao processar o token JWT: " + e.getMessage());
         }
+
         filterChain.doFilter(request, response);
     }
 }
