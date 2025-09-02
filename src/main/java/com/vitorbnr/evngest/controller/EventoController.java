@@ -9,12 +9,14 @@ import com.vitorbnr.evngest.model.Usuario;
 import com.vitorbnr.evngest.repository.EventoRepository;
 import com.vitorbnr.evngest.repository.UsuarioRepository;
 import com.vitorbnr.evngest.service.notificacao.NotificacaoService;
+import com.vitorbnr.evngest.service.relatorio.RelatorioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -36,6 +38,9 @@ public class EventoController {
 
     @Autowired
     private NotificacaoService notificacaoService;
+
+    @Autowired
+    private RelatorioService relatorioService;
 
     private EventoResponseDTO toResponseDTO(Evento evento) {
         EventoResponseDTO dto = new EventoResponseDTO();
@@ -142,4 +147,32 @@ public class EventoController {
         eventoRepository.delete(eventoExistente);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Exporta a lista de inscritos de um evento em CSV")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Relatório gerado com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Usuário não tem permissão para gerar este relatório"),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado")
+    })
+    @GetMapping("/{id}/inscritos/exportar-csv")
+    public ResponseEntity<String> exportarInscritosCsv(
+            @Parameter(description = "ID do evento para exportar os inscritos") @PathVariable Long id,
+            Authentication authentication) {
+
+        Evento evento = eventoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Evento não encontrado com o ID: " + id));
+
+        if (!evento.getCriador().getNomeDeUsuario().equals(authentication.getName())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Acesso negado.");
+        }
+
+        String csvContent = relatorioService.gerarRelatorioInscritosCsv(id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=inscritos_evento_" + id + ".csv");
+        headers.add(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8");
+
+        return new ResponseEntity<>(csvContent, headers, HttpStatus.OK);
+    }
 }
+
