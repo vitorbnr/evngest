@@ -1,5 +1,8 @@
 package com.vitorbnr.evngest.controller.inscricao;
 
+import com.vitorbnr.evngest.dto.EventoResponseDTO;
+import com.vitorbnr.evngest.dto.InscricaoResponseDTO;
+import com.vitorbnr.evngest.dto.UsuarioResponseDTO;
 import com.vitorbnr.evngest.model.Evento;
 import com.vitorbnr.evngest.model.Inscricao;
 import com.vitorbnr.evngest.model.Usuario;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/inscricao")
@@ -33,6 +37,25 @@ public class InscricaoController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    private InscricaoResponseDTO toResponseDTO(Inscricao inscricao) {
+        InscricaoResponseDTO dto = new InscricaoResponseDTO();
+        dto.setId(inscricao.getId());
+        dto.setDataInscricao(inscricao.getDataInscricao());
+
+        UsuarioResponseDTO usuarioDTO = new UsuarioResponseDTO();
+        usuarioDTO.setId(inscricao.getUsuario().getId());
+        usuarioDTO.setNomeDeUsuario(inscricao.getUsuario().getNomeDeUsuario());
+        usuarioDTO.setEmail(inscricao.getUsuario().getEmail());
+        dto.setUsuario(usuarioDTO);
+
+        EventoResponseDTO eventoDTO = new EventoResponseDTO();
+        eventoDTO.setId(inscricao.getEvento().getId());
+        eventoDTO.setNome(inscricao.getEvento().getNome());
+        dto.setEvento(eventoDTO);
+
+        return dto;
+    }
+
     @Operation(summary = "Inscreve o usuário autenticado em um evento")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Inscrição realizada com sucesso"),
@@ -42,19 +65,11 @@ public class InscricaoController {
     @PostMapping("/{idEvento}")
     public ResponseEntity<?> inscreverEmEvento(@Parameter(description = "ID do evento para se inscrever") @PathVariable Long idEvento, Authentication authentication) {
         String nomeDeUsuario = authentication.getName();
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByNomeDeUsuario(nomeDeUsuario);
+        Usuario usuario = usuarioRepository.findByNomeDeUsuario(nomeDeUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
 
-        if (usuarioOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Usuario nao encontrado.");
-        }
-
-        Optional<Evento> eventoOpt = eventoRepository.findById(idEvento);
-        if (eventoOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Evento nao encontrado.");
-        }
-
-        Usuario usuario = usuarioOpt.get();
-        Evento evento = eventoOpt.get();
+        Evento evento = eventoRepository.findById(idEvento)
+                .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
 
         Optional<Inscricao> inscricaoExistente = inscricaoRepository.findByUsuarioAndEvento(usuario, evento);
         if (inscricaoExistente.isPresent()) {
@@ -77,14 +92,14 @@ public class InscricaoController {
             @ApiResponse(responseCode = "404", description = "Evento não encontrado")
     })
     @GetMapping("/evento/{idEvento}")
-    public ResponseEntity<?> listarInscritosPorEvento(@Parameter(description = "ID do evento para listar os inscritos") @PathVariable Long idEvento) {
-        Optional<Evento> eventoOpt = eventoRepository.findById(idEvento);
+    public ResponseEntity<List<InscricaoResponseDTO>> listarInscritosPorEvento(@Parameter(description = "ID do evento para listar os inscritos") @PathVariable Long idEvento) {
+        Evento evento = eventoRepository.findById(idEvento)
+                .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
 
-        if (eventoOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Evento nao encontrado.");
-        }
-
-        List<Inscricao> inscritos = inscricaoRepository.findByEvento(eventoOpt.get());
+        List<InscricaoResponseDTO> inscritos = inscricaoRepository.findByEvento(evento)
+                .stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(inscritos);
     }
